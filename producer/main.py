@@ -2,6 +2,8 @@ import os
 import signal
 import socket
 import sqlite3
+import sys
+import time
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -10,7 +12,7 @@ from datetime import datetime, timezone
 CONFIG = {
     "dump1090_host": os.getenv("DUMP1090_HOST", "localhost"),
     "dump1090_port": int(os.getenv("DUMP1090_PORT", "30003")),
-    "db_path": os.getenv("BUFFER_DB_PATH", "buffer.db"),
+    "buffer_db_path": os.getenv("BUFFER_DB_PATH", "buffer.db"),
 }
 
 
@@ -48,9 +50,13 @@ def managed_connection(db_path: str) -> Iterator[sqlite3.Connection]:
 
 
 def main() -> None:
+    running = True
     sock: socket.socket | None = None
 
     def _handle_signal(signum: int, frame: object) -> None:
+        sys.stderr.write("\nproducer: shutting down\n")
+        nonlocal running
+        running = False
         if sock is not None:
             try:
                 sock.shutdown(socket.SHUT_RD)
@@ -60,14 +66,30 @@ def main() -> None:
     signal.signal(signal.SIGINT, _handle_signal)
     signal.signal(signal.SIGTERM, _handle_signal)
 
-    with managed_connection(CONFIG["db_path"]) as conn:
-        sock = socket.create_connection(
-            (CONFIG["dump1090_host"], CONFIG["dump1090_port"])
-        )
-        with sock, sock.makefile("r", encoding="utf-8") as stream:
-            for raw in stream:
-                print(raw, end="")
-                store_line(conn, raw)
+    with managed_connection(CONFIG["buffer_db_path"]) as conn:
+        while running:
+            try:
+                sock = socket.create_connection(
+                    (CONFIG["dump1090_host"], CONFIG["dump1090_port"]),
+                    timeout=5,
+                )
+            except OSError:
+                if running:
+                    sys.stderr.write("producer: connection failed, retrying...\n")
+                    time.sleep(5)
+                continue
+
+            try:
+                with sock, sock.makefile("r", encoding="utf-8") as stream:
+                    for raw in stream:
+                        print(raw, end="")
+                        store_line(conn, raw)
+            except OSError:
+                pass  # signal-triggered shutdown
+
+            if running:
+                sys.stderr.write("producer: disconnected, reconnecting...\n")
+                time.sleep(5)
 
 
 if __name__ == "__main__":
