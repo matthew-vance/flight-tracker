@@ -1,0 +1,4 @@
+allowBuilds:
+  '@confluentinc/kafka-javascript': true
+minimumReleaseAgeExclude:
+  - '@types/node@25.9.2'

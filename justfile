@@ -1,3 +1,7 @@
+[working-directory("api")]
+api:
+    node src/index.ts
+
 [working-directory("producer")]
 [env("VIRTUAL_ENV", "")]
 producer:

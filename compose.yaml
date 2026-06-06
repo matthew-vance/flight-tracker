@@ -77,6 +77,19 @@ services:
       init-redpanda:
         condition: service_completed_successfully
 
+  api:
+    build: ./api
+    container_name: api
+    networks:
+      - redpanda_network
+    ports:
+      - "3000:3000"
+    environment:
+      KAFKA_BROKERS: "redpanda-0:9092"
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.5.14
     container_name: ksqldb-server
