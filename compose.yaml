@@ -45,7 +45,7 @@ services:
     entrypoint: /bin/sh
     command:
       - -c
-      - rpk topic create adsb.raw   --if-not-exists --brokers redpanda-0:9092 && rpk topic create adsb.parsed --if-not-exists --brokers redpanda-0:9092
+      - rpk topic create adsb.raw   --if-not-exists --brokers redpanda-0:9092 && rpk topic create adsb.parsed --if-not-exists --brokers redpanda-0:9092 && rpk topic create adsb.state  --if-not-exists --brokers redpanda-0:9092 --config cleanup.policy=compact
     networks:
       - redpanda_network
     depends_on:
