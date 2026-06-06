@@ -2,10 +2,9 @@ name: flight-tracker
 
 networks:
   redpanda_network:
-    driver: bridge
 
 volumes:
-  redpanda-0: null
+  redpanda-0:
 
 services:
   redpanda-0:
@@ -46,7 +45,7 @@ services:
     entrypoint: /bin/sh
     command:
       - -c
-      - rpk topic create adsb.raw --brokers redpanda-0:9092
+      - rpk topic create adsb.raw   --if-not-exists --brokers redpanda-0:9092 && rpk topic create adsb.parsed --if-not-exists --brokers redpanda-0:9092
     networks:
       - redpanda_network
     depends_on:
@@ -77,3 +76,23 @@ services:
     depends_on:
       init-redpanda:
         condition: service_completed_successfully
+
+  ksqldb-server:
+    image: confluentinc/cp-ksqldb-server:7.5.14
+    container_name: ksqldb-server
+    networks:
+      - redpanda_network
+    volumes:
+      - ./ksqldb/processor:/processor:ro
+    environment:
+      KSQL_CONFIG_DIR: "/etc/ksql"
+      KSQL_BOOTSTRAP_SERVERS: "redpanda-0:9092"
+      KSQL_CACHE_MAX_BYTES_BUFFERING: 0
+      KSQL_KSQL_SCHEMA_REGISTRY_URL: "http://redpanda-0:8081"
+      KSQL_KSQL_QUERIES_FILE: "/processor/queries.sql"
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_REPLICATION_FACTOR: 1
+      KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
+      KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
