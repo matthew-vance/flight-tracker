@@ -77,6 +77,20 @@ services:
       init-redpanda:
         condition: service_completed_successfully
 
+  consumer:
+    build: ./consumer
+    container_name: consumer
+    networks:
+      - redpanda_network
+    volumes:
+      - ./consumer/data:/data
+    environment:
+      REDPANDA_BROKER: "redpanda-0:9092"
+      OUTPUT_DIR: "/data"
+    depends_on:
+      redpanda-0:
+        condition: service_healthy
+
   api:
     build: ./api
     container_name: api
