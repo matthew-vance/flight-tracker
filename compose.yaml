@@ -88,8 +88,8 @@ services:
       REDPANDA_BROKER: "redpanda-0:9092"
       OUTPUT_DIR: "/data"
     depends_on:
-      redpanda-0:
-        condition: service_healthy
+      init-redpanda:
+        condition: service_completed_successfully
 
   api:
     build: ./api
@@ -101,8 +101,8 @@ services:
     environment:
       KAFKA_BROKERS: "redpanda-0:9092"
     depends_on:
-      redpanda-0:
-        condition: service_healthy
+      init-redpanda:
+        condition: service_completed_successfully
 
   ksqldb-server:
     image: confluentinc/cp-ksqldb-server:7.5.14
@@ -121,5 +121,5 @@ services:
       KSQL_KSQL_LOGGING_PROCESSING_TOPIC_AUTO_CREATE: "true"
       KSQL_KSQL_LOGGING_PROCESSING_STREAM_AUTO_CREATE: "true"
     depends_on:
-      redpanda-0:
-        condition: service_healthy
+      init-redpanda:
+        condition: service_completed_successfully
